@@ -1,0 +1,142 @@
+{# 继承 RTD 主题的默认布局 #}
+{% extends "!layout.html" %}
+
+{# 1. 头部扩展：添加自定义CSS和必要的meta #}
+{% block extrahead %}
+    {{ super() }}
+    {# 自定义CSS（如果需要） #}
+    <link rel="stylesheet" href="{{ pathto('_static/css/custom.css', 1) }}" type="text/css" />
+    {# 版本选择器的基础样式（直接内嵌） #}
+    <style>
+        .version-switcher-container {
+            position: fixed;
+            left: 20px;
+            bottom: 30px;
+            padding: 8px 12px;
+            background-color: transparent;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+        }
+        .version-label {
+            font-size: 14px;
+            color: #077e29;
+            margin-right: 8px;
+            font-weight: 500;
+        }
+        .version-select {
+            padding: 4px 8px;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            font-size: 14px;
+            color: #077e29;
+            background-color: transparent;
+            cursor: pointer;
+            outline: none; /* 去掉默认外边框 */
+            -webkit-appearance: none; /* 去掉webkit内核浏览器默认样式 */
+            -moz-appearance: none; /* 去掉firefox默认样式 */
+            appearance: none; /* 标准写法，去掉原生下拉样式 */
+        }
+        /* 关键：覆盖所有状态的高亮样式 */
+        .version-select:focus,
+        .version-select:active,
+        .version-select:focus-visible {
+            border-color: #077e29 !important; /* 保持自定义绿色边框 */
+            color: #077e29 !important;       /* 保持文字颜色 */
+            background-color: transparent !important; /* 保持透明背景 */
+            outline: none !important;        /* 彻底去掉默认外发光 */
+            box-shadow: none !important;     /* 去掉默认阴影高亮 */
+        }
+        .version-select:hover {
+            border-color: #077e29;
+            color: #077e29;
+        }
+        /* 覆盖下拉选项的默认高亮样式（可选） */
+        .version-select option {
+            background-color: #ffffff; /* 选项背景设为白色 */
+            color: #077e29;            /* 选项文字颜色 */
+        }
+        .version-select option:checked {
+            background-color: #f0f8f2; /* 选中选项的背景（浅绿） */
+            color: #077e29;
+        }
+        @media (max-width: 768px) {
+            .version-switcher-container {
+                left: 10px;
+                bottom: 10px;
+                padding: 6px 10px;
+            }
+            .version-label {
+                font-size: 13px;
+            }
+            .version-select {
+                font-size: 13px;
+                padding: 3px 6px;
+                color: #077e29;
+            }
+        }
+    </style>
+{% endblock %}
+
+{# 2. 页脚扩展：添加版本选择器和适配本地路径的交互脚本 #}
+{% block footer %}
+    {{ super() }}
+    
+    {# 版本选择器核心容器 #}
+    <div class="version-switcher-container">
+        <span class="version-label">文档版本：</span>
+        <select class="version-select" id="versionSelector">
+            {% for version in version_options %}
+                <option 
+                    data-version="{{ version.name }}"  {# 仅存储版本号，如 v1.0 #}
+                    {% if version.name == current_version %}selected{% endif %}
+                >
+                    {{ version.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {# 版本切换核心脚本（适配file:///本地路径） #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const versionSelector = document.getElementById('versionSelector');
+            
+            /**
+             * 核心逻辑：替换URL中的版本号，保留其他部分
+             */
+            function switchVersion() {
+                // 1. 获取选中的新版本号（如 v1.0）
+                const selectedVersion = this.options[this.selectedIndex].dataset.version;
+                if (!selectedVersion) return;
+                
+                // 2. 获取当前完整URL（本地file协议路径）
+                const currentUrl = window.location.href;
+                
+                // 3. 正则匹配并替换版本号（匹配 v+数字.数字 格式，如 v1.0、v2.0）
+                const versionRegex = /v\d+\.\d+/;
+                const newUrl = currentUrl.replace(versionRegex, selectedVersion);
+                
+                // 4. 验证并跳转（避免重复跳转）
+                if (newUrl && newUrl !== currentUrl) {
+                    window.location.href = newUrl;
+                }
+            }
+
+            // 绑定下拉框change事件
+            versionSelector.addEventListener('change', switchVersion);
+            
+            // 绑定键盘回车事件
+            versionSelector.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    switchVersion.call(this);
+                }
+            });
+        });
+    </script>
+{% endblock %}
+
+{# 保留原有区块 #}
+{% block relbar_bottom %}{{ super() }}{% endblock %}
+{% block sidebartoc %}{{ super() }}{% endblock %}
